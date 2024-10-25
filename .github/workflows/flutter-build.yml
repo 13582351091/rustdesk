@@ -1100,7 +1100,7 @@ jobs:
         uses: actions/upload-artifact@master
         with:
           name: rustdesk.aarch64.apk
-          path: ./flutter/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+          path: /home/runner/work/rustdesk/rustdesk/flutter/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
 
       - name: Publish unsigned apk package
         if: env.ANDROID_SIGNING_KEY == null && env.UPLOAD_ARTIFACT == 'true'

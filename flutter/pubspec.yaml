@@ -104,6 +104,15 @@ dependencies:
   pull_down_button: ^0.9.3
   device_info_plus: ^9.1.0
   qr_flutter: ^4.1.0
+  flutter_riverpod: ^2.4.9 # save vip status
+  community_material_icon: ^5.9.55 #purchase card icon
+  easy_localization: ^3.0.3
+  carousel_slider: ^4.2.1 #purchase card icon
+  oktoast: ^3.3.2+1
+  equatable: ^2.0.5
+  animate_do: ^3.1.2 # used in onBoarding page->ad page
+  feather_icons: ^1.2.0
+  animated_bottom_navigation_bar: ^1.3.3
 
 dev_dependencies:
   icons_launcher: ^2.0.4

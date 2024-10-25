@@ -12,6 +12,7 @@ import 'package:flutter_hbb/consts.dart';
 import 'package:flutter_hbb/desktop/pages/connection_page.dart';
 import 'package:flutter_hbb/desktop/pages/desktop_setting_page.dart';
 import 'package:flutter_hbb/desktop/pages/desktop_tab_page.dart';
+import 'package:flutter_hbb/desktop/pages/person_page.dart';
 import 'package:flutter_hbb/desktop/widgets/scroll_wrapper.dart';
 import 'package:flutter_hbb/models/platform_model.dart';
 import 'package:flutter_hbb/models/server_model.dart';
@@ -24,6 +25,8 @@ import 'package:window_manager/window_manager.dart';
 import 'package:window_size/window_size.dart' as window_size;
 
 import '../widgets/button.dart';
+import 'package:animated_bottom_navigation_bar/animated_bottom_navigation_bar.dart';
+
 
 class DesktopHomePage extends StatefulWidget {
   const DesktopHomePage({Key? key}) : super(key: key);
@@ -55,18 +58,86 @@ class _DesktopHomePageState extends State<DesktopHomePage>
 
   final GlobalKey _childKey = GlobalKey();
 
+
+  int _currentIndex = 0;//底部跳转栏索引，同时对应page list的页面
+  final List<dynamic> _pages = [];
+
+  void initPages() {
+    //添加页面list
+    _pages.clear();
+    _pages.addAll([ConnectionPage(),PersonPage()]);
+
+  }
+
+
+
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
     final isIncomingOnly = bind.isIncomingOnly();
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        buildLeftPane(context),
-        if (!isIncomingOnly) const VerticalDivider(width: 1),
-        if (!isIncomingOnly) Expanded(child: buildRightPane(context)),
-      ],
-    );
+    // return Row(
+    //   crossAxisAlignment: CrossAxisAlignment.start,
+    //   children: [
+    //     buildLeftPane(context),
+    //     if (!isIncomingOnly) const VerticalDivider(width: 1),
+    //     if (!isIncomingOnly) Expanded(child: buildRightPane(context)),
+    //   ],
+    // );
+
+    //使用willPop自定义显示page list的页面作为home page
+    return WillPopScope(
+        onWillPop: () async {
+          if (_currentIndex!= 0) {
+            setState(() {
+              _currentIndex = 0;
+            });
+          } else {
+            return true;
+          }
+          return false;
+        },
+        child: Scaffold(
+          appBar: AppBar(
+            backgroundColor: Color(0xFFFFFFFF),
+            title: const Text(
+              "LinkDesk",
+              style: TextStyle(
+                color: Color(0xFFFF6F00),
+                fontFamily: 'Roboto',
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+            leading: IconButton(
+              icon: Icon(Icons.person, color: Colors.black),
+              onPressed: () {
+                setState(() {
+                  _currentIndex = 1;//跳转到第二个页面即person页面
+                });
+              },
+            ),
+            actions: [
+              //这里可以添加search等效果
+            ],
+          ),
+          body: _pages.elementAt(_currentIndex),
+          bottomNavigationBar: AnimatedBottomNavigationBar(
+            icons: <IconData>[
+              Icons.home,
+              Icons.person
+            ],
+            activeIndex: _currentIndex,
+            onTap: (index){
+              setState(() {
+                _currentIndex = index;
+              });
+            },
+            gapLocation: GapLocation.center,
+            notchSmoothness: NotchSmoothness.verySmoothEdge,
+            activeColor: Color(0xFFFF6F00),
+
+          ),
+        ));
   }
 
   Widget buildLeftPane(BuildContext context) {
@@ -803,7 +874,14 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         _updateWindowSize();
       });
     }
+
+    //初始化home需要显示的页面
+    initPages();
+
+
   }
+
+
 
   _updateWindowSize() {
     RenderObject? renderObject = _childKey.currentContext?.findRenderObject();
