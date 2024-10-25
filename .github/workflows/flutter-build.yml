@@ -24,7 +24,7 @@ env:
   SCITER_ARMV7_CMAKE_VERSION: "3.29.7"
   SCITER_NASM_DEBVERSION: "2.14-1"
   LLVM_VERSION: "15.0.6"
-  FLUTTER_VERSION: "3.22.2"
+  FLUTTER_VERSION: "3.19.6"
   ANDROID_FLUTTER_VERSION: "3.13.9" # >= 3.16 is very slow on my android phone, but work well on most of others. We may switch to new flutter after changing to texture rendering (I believe it can solve my problem).
   FLUTTER_RUST_BRIDGE_VERSION: "1.80.1"
   # for arm64 linux because official Dart SDK does not work
@@ -33,8 +33,8 @@ env:
   VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
   # vcpkg version: 2024.07.12
   VCPKG_COMMIT_ID: "1de2026f28ead93ff1773e6e680387643e914ea1"
-  VERSION: "1.3.2"
-  NDK_VERSION: "r27b"
+  VERSION: "1.3.0"
+  NDK_VERSION: "r27"
   #signing keys env variable checks
   ANDROID_SIGNING_KEY: "${{ secrets.ANDROID_SIGNING_KEY }}"
   MACOS_P12_BASE64: "${{ secrets.MACOS_P12_BASE64 }}"
@@ -521,12 +521,6 @@ jobs:
         run: |
           rustup target add ${{ matrix.job.target }}
           cargo build --features flutter,hwcodec --release --target aarch64-apple-ios --lib
-          
-      - name: Upload Artifacts ios liba
-        uses: actions/upload-artifact@master
-        with:
-          name: liblibrustdesk.a
-          path: target/aarch64-apple-ios/release/liblibrustdesk.a
 
       - name: Build rustdesk
         shell: bash
@@ -890,7 +884,7 @@ jobs:
                git \
                g++ \
                g++-multilib \
-               libayatana-appindicator3-dev \
+               libappindicator3-dev \
                libasound2-dev \
                libc6-dev \
                libclang-10-dev \
@@ -982,11 +976,8 @@ jobs:
       - name: fix android for flutter 3.13
         if: $${{ env.ANDROID_FLUTTER_VERSION == '3.13.9' }}
         run: |
-          cd flutter
-          sed -i 's/uni_links_desktop/#uni_links_desktop/g' pubspec.yaml
-          sed -i 's/extended_text: .*/extended_text: 11.1.0/' pubspec.yaml
-          flutter pub get
-          cd lib
+          sed -i 's/uni_links_desktop/#uni_links_desktop/g' flutter/pubspec.yaml
+          cd flutter/lib
           find . | grep dart | xargs sed -i 's/textScaler: TextScaler.linear(\(.*\)),/textScaleFactor: \1,/g'
 
       - name: Build rustdesk lib
@@ -1153,7 +1144,7 @@ jobs:
                git \
                g++ \
                g++-multilib \
-               libayatana-appindicator3-dev \
+               libappindicator3-dev \
                libasound2-dev \
                libc6-dev \
                libclang-10-dev \
@@ -1219,11 +1210,8 @@ jobs:
       - name: fix android for flutter 3.13
         if: $${{ env.ANDROID_FLUTTER_VERSION == '3.13.9' }}
         run: |
-          cd flutter
-          sed -i 's/uni_links_desktop/#uni_links_desktop/g' pubspec.yaml
-          sed -i 's/extended_text: .*/extended_text: 11.1.0/' pubspec.yaml
-          flutter pub get
-          cd lib
+          sed -i 's/uni_links_desktop/#uni_links_desktop/g' flutter/pubspec.yaml
+          cd flutter/lib
           find . | grep dart | xargs sed -i 's/textScaler: TextScaler.linear(\(.*\)),/textScaleFactor: \1,/g'
 
       - name: Build rustdesk
@@ -1430,7 +1418,7 @@ jobs:
                gcc \
                git \
                g++ \
-               libayatana-appindicator3-dev \
+               libappindicator3-dev \
                libasound2-dev \
                libclang-10-dev \
                libgstreamer1.0-dev \
@@ -1687,7 +1675,7 @@ jobs:
                gcc \
                git \
                g++ \
-               libayatana-appindicator3-dev \
+               libappindicator3-dev \
                libasound2-dev \
                libclang-dev \
                libdbus-1-dev \

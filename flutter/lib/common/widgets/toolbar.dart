@@ -147,23 +147,12 @@ List<TTextMenu> toolbarControls(BuildContext context, String id, FFI ffi) {
         child: Text(translate('Reset canvas')),
         onPressed: () => ffi.cursorModel.reset()));
   }
-
-  connectWithToken(
-      {required bool isFileTransfer, required bool isTcpTunneling}) {
-    final connToken = bind.sessionGetConnToken(sessionId: ffi.sessionId);
-    connect(context, id,
-        isFileTransfer: isFileTransfer,
-        isTcpTunneling: isTcpTunneling,
-        connToken: connToken);
-  }
-
   // transferFile
   if (isDesktop) {
     v.add(
       TTextMenu(
           child: Text(translate('Transfer file')),
-          onPressed: () =>
-              connectWithToken(isFileTransfer: true, isTcpTunneling: false)),
+          onPressed: () => connect(context, id, isFileTransfer: true)),
     );
   }
   // tcpTunneling
@@ -171,8 +160,7 @@ List<TTextMenu> toolbarControls(BuildContext context, String id, FFI ffi) {
     v.add(
       TTextMenu(
           child: Text(translate('TCP tunneling')),
-          onPressed: () =>
-              connectWithToken(isFileTransfer: false, isTcpTunneling: true)),
+          onPressed: () => connect(context, id, isTcpTunneling: true)),
     );
   }
   // note
@@ -195,7 +183,7 @@ List<TTextMenu> toolbarControls(BuildContext context, String id, FFI ffi) {
       (pi.platform == kPeerPlatformLinux || pi.sasEnabled)) {
     v.add(
       TTextMenu(
-          child: Text('${translate("Insert Ctrl + Alt + Del")}'),
+          child: Text('${translate("Insert")} Ctrl + Alt + Del'),
           onPressed: () => bind.sessionCtrlAltDel(sessionId: sessionId)),
     );
   }
