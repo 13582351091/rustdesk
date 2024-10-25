@@ -1095,6 +1095,12 @@ jobs:
           tag_name: ${{ env.TAG_NAME }}
           files: |
             ${{steps.sign-rustdesk.outputs.signedReleaseFile}}
+            
+      - name: Upload Rustdesk unsigned aarch64 apk to Artifacts
+        uses: actions/upload-artifact@master
+        with:
+          name: rustdesk.aarch64.apk
+          path: ./flutter/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
 
       - name: Publish unsigned apk package
         if: env.ANDROID_SIGNING_KEY == null && env.UPLOAD_ARTIFACT == 'true'
