@@ -30,6 +30,7 @@ import 'common/widgets/overlay.dart';
 import 'mobile/pages/file_manager_page.dart';
 import 'mobile/pages/remote_page.dart';
 import 'desktop/pages/remote_page.dart' as desktop_remote;
+import 'desktop/pages/file_manager_page.dart' as desktop_file_manager;
 import 'package:flutter_hbb/desktop/widgets/remote_toolbar.dart';
 import 'models/model.dart';
 import 'models/platform_model.dart';
@@ -38,15 +39,6 @@ import 'package:flutter_hbb/native/win32.dart'
     if (dart.library.html) 'package:flutter_hbb/web/win32.dart';
 import 'package:flutter_hbb/native/common.dart'
     if (dart.library.html) 'package:flutter_hbb/web/common.dart';
-
-import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';//弹窗提示vip
-import 'package:clipboard/clipboard.dart';//剪切板
-import 'dart:io';//platform
-import 'package:hive/hive.dart'; //修改数据库vip status
-import 'package:path_provider/path_provider.dart' as path_provider;//应用路径 //hive
-import 'package:share_plus/share_plus.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;//WidgetRef ref使用
-
 
 final globalKey = GlobalKey<NavigatorState>();
 final navigationBarKey = GlobalKey();
@@ -59,6 +51,9 @@ final isLinux = isLinux_;
 final isDesktop = isDesktop_;
 final isWeb = isWeb_;
 final isWebDesktop = isWebDesktop_;
+final isWebOnWindows = isWebOnWindows_;
+final isWebOnLinux = isWebOnLinux_;
+final isWebOnMacOs = isWebOnMacOS_;
 var isMobile = isAndroid || isIOS;
 var version = '';
 int androidVersion = 0;
@@ -356,6 +351,9 @@ class MyTheme {
     hoverColor: Color.fromARGB(255, 224, 224, 224),
     scaffoldBackgroundColor: Colors.white,
     dialogBackgroundColor: Colors.white,
+    appBarTheme: AppBarTheme(
+      shadowColor: Colors.transparent,
+    ),
     dialogTheme: DialogTheme(
       elevation: 15,
       shape: RoundedRectangleBorder(
@@ -451,6 +449,9 @@ class MyTheme {
     hoverColor: Color.fromARGB(255, 45, 46, 53),
     scaffoldBackgroundColor: Color(0xFF18191E),
     dialogBackgroundColor: Color(0xFF18191E),
+    appBarTheme: AppBarTheme(
+      shadowColor: Colors.transparent,
+    ),
     dialogTheme: DialogTheme(
       elevation: 15,
       shape: RoundedRectangleBorder(
@@ -554,9 +555,9 @@ class MyTheme {
     return themeModeFromString(bind.mainGetLocalOption(key: kCommConfKeyTheme));
   }
 
-  static void changeDarkMode(ThemeMode mode) async {
+  static Future<void> changeDarkMode(ThemeMode mode) async {
     Get.changeThemeMode(mode);
-    if (desktopType == DesktopType.main || isAndroid || isIOS) {
+    if (desktopType == DesktopType.main || isAndroid || isIOS || isWeb) {
       if (mode == ThemeMode.system) {
         await bind.mainSetLocalOption(
             key: kCommConfKeyTheme, value: defaultOptionTheme);
@@ -564,7 +565,7 @@ class MyTheme {
         await bind.mainSetLocalOption(
             key: kCommConfKeyTheme, value: mode.toShortString());
       }
-      await bind.mainChangeTheme(dark: mode.toShortString());
+      if (!isWeb) await bind.mainChangeTheme(dark: mode.toShortString());
       // Synchronize the window theme of the system.
       updateSystemWindowTheme();
     }
@@ -680,10 +681,12 @@ closeConnection({String? id}) {
           overlays: SystemUiOverlay.values);
       gFFI.chatModel.hideChatOverlay();
       Navigator.popUntil(globalKey.currentContext!, ModalRoute.withName("/"));
+      stateGlobal.isInMainPage = true;
     }();
   } else {
     if (isWeb) {
       Navigator.popUntil(globalKey.currentContext!, ModalRoute.withName("/"));
+      stateGlobal.isInMainPage = true;
     } else {
       final controller = Get.find<DesktopTabController>();
       controller.closeBy(id);
@@ -1152,7 +1155,7 @@ void msgBox(SessionID sessionId, String type, String title, String text,
       launchUrl(Uri.parse(link));
     }
   }
-  //正常连接不会断到这里，说明这个函数本身只是提示错误
+
   if (type != "connecting" && type != "success" && !type.contains("nook")) {
     hasOk = true;
     buttons.insert(0, dialogButton('OK', onPressed: submit));
@@ -1171,7 +1174,6 @@ void msgBox(SessionID sessionId, String type, String title, String text,
           dialogManager.dismissAll();
         }));
   }
-  //正常连接不会断到这里，说明之前才是连接窗口，这里只是提示错误
   if (reconnect != null && title == "Connection Error") {
     // `enabled` is used to disable the dialog button once the button is clicked.
     final enabled = true.obs;
@@ -1214,7 +1216,6 @@ void msgBox(SessionID sessionId, String type, String title, String text,
     ),
     tag: '$sessionId-$type-$title-$text-$link',
   );
-
 }
 
 Color? _msgboxColor(String type) {
@@ -2037,6 +2038,8 @@ Future<bool> restoreWindowPosition(WindowType type,
   return false;
 }
 
+var webInitialLink = "";
+
 /// Initialize uni links for macos/windows
 ///
 /// [Availability]
@@ -2053,7 +2056,12 @@ Future<bool> initUniLinks() async {
     if (initialLink == null || initialLink.isEmpty) {
       return false;
     }
-    return handleUriLink(uriString: initialLink);
+    if (isWeb) {
+      webInitialLink = initialLink;
+      return false;
+    } else {
+      return handleUriLink(uriString: initialLink);
+    }
   } catch (err) {
     debugPrintStack(label: "$err");
     return false;
@@ -2066,7 +2074,7 @@ Future<bool> initUniLinks() async {
 ///
 /// Returns a [StreamSubscription] which can listen the uni links.
 StreamSubscription? listenUniLinks({handleByFlutter = true}) {
-  if (isLinux) {
+  if (isLinux || isWeb) {
     return null;
   }
 
@@ -2296,16 +2304,19 @@ connectMainDesktop(String id,
     required bool isRDP,
     bool? forceRelay,
     String? password,
+    String? connToken,
     bool? isSharedPassword}) async {
   if (isFileTransfer) {
     await rustDeskWinManager.newFileTransfer(id,
         password: password,
         isSharedPassword: isSharedPassword,
+        connToken: connToken,
         forceRelay: forceRelay);
   } else if (isTcpTunneling || isRDP) {
     await rustDeskWinManager.newPortForward(id, isRDP,
         password: password,
         isSharedPassword: isSharedPassword,
+        connToken: connToken,
         forceRelay: forceRelay);
   } else {
     await rustDeskWinManager.newRemoteDesktop(id,
@@ -2314,58 +2325,6 @@ connectMainDesktop(String id,
         forceRelay: forceRelay);
   }
 }
-
-
-
-
-//这个在NullableStringExt中使用
-extension StringExt on String {
-  bool get isBlank {
-    if (length == 0) {
-      return true;
-    }
-    for (final int value in runes) {
-      if (!_isWhitespace(value)) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  bool _isWhitespace(int rune) =>
-      (rune >= 0x0009 && rune <= 0x000D) ||
-          rune == 0x0020 ||
-          rune == 0x0085 ||
-          rune == 0x00A0 ||
-          rune == 0x1680 ||
-          rune == 0x180E ||
-          (rune >= 0x2000 && rune <= 0x200A) ||
-          rune == 0x2028 ||
-          rune == 0x2029 ||
-          rune == 0x202F ||
-          rune == 0x205F ||
-          rune == 0x3000 ||
-          rune == 0xFEFF;
-
-  String fillChar(String value, String char) {
-    final int offset = value.length - length;
-    String newVal = this;
-    if (offset > 0) {
-      for (int i = 0; i < offset; i++) {
-        newVal = char + newVal;
-      }
-    }
-    return newVal;
-  }
-}
-
-
-
-
-
-
-
-
 
 /// Connect to a peer with [id].
 /// If [isFileTransfer], starts a session only for file transfer.
@@ -2377,10 +2336,9 @@ connect(BuildContext context, String id,
     bool isRDP = false,
     bool forceRelay = false,
     String? password,
+    String? connToken,
     bool? isSharedPassword}) async {
-  print("历史或者第一次发起一个连接");
-
-  if (id == '') return;//历史记录中的连接也能触发这个
+  if (id == '') return;
   if (!isDesktop || desktopType == DesktopType.main) {
     try {
       if (Get.isRegistered<IDTextEditingController>()) {
@@ -2411,8 +2369,7 @@ connect(BuildContext context, String id,
         isSharedPassword: isSharedPassword,
         forceRelay: forceRelay2,
       );
-    }
-    else {
+    } else {
       await rustDeskWinManager.call(WindowType.Main, kWindowConnect, {
         'id': id,
         'isFileTransfer': isFileTransfer,
@@ -2421,25 +2378,40 @@ connect(BuildContext context, String id,
         'password': password,
         'isSharedPassword': isSharedPassword,
         'forceRelay': forceRelay,
+        'connToken': connToken,
       });
     }
-  }
-  else {
+  } else {
     if (isFileTransfer) {
-      if (!await AndroidPermissionManager.check(kManageExternalStorage)) {
-        if (!await AndroidPermissionManager.request(kManageExternalStorage)) {
-          return;
+      if (isAndroid) {
+        if (!await AndroidPermissionManager.check(kManageExternalStorage)) {
+          if (!await AndroidPermissionManager.request(kManageExternalStorage)) {
+            return;
+          }
         }
       }
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (BuildContext context) => FileManagerPage(
-              id: id, password: password, isSharedPassword: isSharedPassword),
-        ),
-      );
+      if (isWeb) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (BuildContext context) =>
+                desktop_file_manager.FileManagerPage(
+                    id: id,
+                    password: password,
+                    isSharedPassword: isSharedPassword),
+          ),
+        );
+      } else {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (BuildContext context) => FileManagerPage(
+                id: id, password: password, isSharedPassword: isSharedPassword),
+          ),
+        );
+      }
     } else {
-      if (isWebDesktop) {
+      if (isWeb) {
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -2463,104 +2435,7 @@ connect(BuildContext context, String id,
         );
       }
     }
-  }
-
-  FocusScopeNode currentFocus = FocusScope.of(context);
-  if (!currentFocus.hasPrimaryFocus) {
-    currentFocus.unfocus();
-  }
-}
-
-connect_direct(BuildContext context, String id,
-    {bool isFileTransfer = false,
-      bool isTcpTunneling = false,
-      bool isRDP = false,
-      bool forceRelay = false,
-      String? password,
-      bool? isSharedPassword}) async {
-  if (id == '') return;//历史记录中的连接也能触发这个
-  if (!isDesktop || desktopType == DesktopType.main) {
-    try {
-      if (Get.isRegistered<IDTextEditingController>()) {
-        final idController = Get.find<IDTextEditingController>();
-        idController.text = formatID(id);
-      }
-      if (Get.isRegistered<TextEditingController>()) {
-        final fieldTextEditingController = Get.find<TextEditingController>();
-        fieldTextEditingController.text = formatID(id);
-      }
-    } catch (_) {}
-  }
-  id = id.replaceAll(' ', '');
-  final oldId = id;
-  id = await bind.mainHandleRelayId(id: id);
-  final forceRelay2 = id != oldId || forceRelay;
-  assert(!(isFileTransfer && isTcpTunneling && isRDP),
-  "more than one connect type");
-
-  if (isDesktop) {
-    if (desktopType == DesktopType.main) {
-      await connectMainDesktop(
-        id,
-        isFileTransfer: isFileTransfer,
-        isTcpTunneling: isTcpTunneling,
-        isRDP: isRDP,
-        password: password,
-        isSharedPassword: isSharedPassword,
-        forceRelay: forceRelay2,
-      );
-    }
-    else {
-      await rustDeskWinManager.call(WindowType.Main, kWindowConnect, {
-        'id': id,
-        'isFileTransfer': isFileTransfer,
-        'isTcpTunneling': isTcpTunneling,
-        'isRDP': isRDP,
-        'password': password,
-        'isSharedPassword': isSharedPassword,
-        'forceRelay': forceRelay,
-      });
-    }
-  }
-  else {
-    if (isFileTransfer) {
-      if (!await AndroidPermissionManager.check(kManageExternalStorage)) {
-        if (!await AndroidPermissionManager.request(kManageExternalStorage)) {
-          return;
-        }
-      }
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (BuildContext context) => FileManagerPage(
-              id: id, password: password, isSharedPassword: isSharedPassword),
-        ),
-      );
-    } else {
-      if (isWebDesktop) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (BuildContext context) => desktop_remote.RemotePage(
-              key: ValueKey(id),
-              id: id,
-              toolbarState: ToolbarState(),
-              password: password,
-              forceRelay: forceRelay,
-              isSharedPassword: isSharedPassword,
-            ),
-          ),
-        );
-      } else {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (BuildContext context) => RemotePage(
-                id: id, password: password, isSharedPassword: isSharedPassword),
-          ),
-        );
-      }
-    }
+    stateGlobal.isInMainPage = false;
   }
 
   FocusScopeNode currentFocus = FocusScope.of(context);
@@ -3310,9 +3185,13 @@ class _ReconnectCountDownButtonState extends State<_ReconnectCountDownButton> {
 
 importConfig(List<TextEditingController>? controllers, List<RxString>? errMsgs,
     String? text) {
+  text = text?.trim();
   if (text != null && text.isNotEmpty) {
     try {
       final sc = ServerConfig.decode(text);
+      if (isWeb || isIOS) {
+        sc.relayServer = '';
+      }
       if (sc.idServer.isNotEmpty) {
         Future<bool> success = setServerConfig(controllers, errMsgs, sc);
         success.then((value) {
@@ -3752,3 +3631,7 @@ List<SubWindowResizeEdge>? get subWindowManagerEnableResizeEdges => isWindows
         SubWindowResizeEdge.topRight,
       ]
     : null;
+
+void earlyAssert() {
+  assert('\1' == '1');
+}
