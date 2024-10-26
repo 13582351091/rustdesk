@@ -67,12 +67,22 @@ class HomePageState extends State<HomePage> {
           return false;
         },
         child: Scaffold(
+
           // backgroundColor: MyTheme.grayBg,
           appBar: AppBar(
+            backgroundColor: Color(0xFFFFFFFF),
             centerTitle: true,
-            title: appTitle(),
+            title: const Text(
+              "LinkDesk",
+              style: TextStyle(
+                color: Color(0xFFFF6F00),
+                fontFamily: 'Roboto',
+                fontWeight: FontWeight.w400,
+              ),
+            ),
             actions: _pages.elementAt(_selectedIndex).appBarActions,
           ),
+
           bottomNavigationBar: BottomNavigationBar(
             key: navigationBarKey,
             items: _pages
@@ -144,7 +154,8 @@ class HomePageState extends State<HomePage> {
         ],
       );
     }
-    return Text(bind.mainGetAppNameSync());
+    // return Text(bind.mainGetAppNameSync());
+    return Text("LinkDesk");
   }
 }
 
