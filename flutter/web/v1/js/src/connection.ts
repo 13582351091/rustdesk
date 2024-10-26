@@ -8,7 +8,7 @@ import { decompress, mapKey, sleep } from "./common";
 
 const PORT = 21116;
 const HOSTS = [
-  "rd-1.natfrp.cloud",
+   "rd-1.natfrp.cloud",
 ];
 let HOST = localStorage.getItem("rendezvous-server") || HOSTS[0];
 const SCHEMA = "ws://";
