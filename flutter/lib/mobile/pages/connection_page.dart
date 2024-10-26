@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:auto_size_text_field/auto_size_text_field.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hbb/common/formatter/id_formatter.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -81,22 +82,130 @@ class _ConnectionPageState extends State<ConnectionPage> {
     }
   }
 
+  Widget buildLinkDeskHome(BuildContext context){
+    //appbar和底边栏在外添加-比如homepage处添加
+    return Scaffold(
+      body: Column(
+        mainAxisSize: MainAxisSize.max,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(height: 20,),//不让文字离bar太近
+          //左对齐文字
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Padding(
+              padding: const EdgeInsets.only(left: 16.0), // 设置左边距
+              child: Text(
+                '连接远程设备',
+                style: TextStyle(
+                  color:Color(0xFFFF6F00),
+                  fontFamily: 'Roboto',
+                  fontWeight: FontWeight.w400,
+                  fontSize: 20.0, // 设置文字大小
+                ),
+              ),
+            ),
+          ),
+          SizedBox(height: 20,),//between text field and title
+          //远程id输入框-绑定id controller
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Padding(
+              padding: const EdgeInsets.only(left: 16.0), // 设置左边距
+              child: TextField(
+                autocorrect: false,
+                enableSuggestions: false,
+                keyboardType: TextInputType.visiblePassword,
+                controller: _idController,
+                decoration: InputDecoration(
+                  hintText: '远程设备id',
+                  filled: true,
+                  fillColor: Color(0xFFF6F1F1),//灰色填充
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          SizedBox(height: 20,),//between text field and button
+          //inkwell包裹按钮产生水波纹效果
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0), // 设置左右边距
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween, // 左右分散对齐
+              children: [
+                Expanded(
+                  child: InkWell(
+                    onTap: onConnect,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Color(0xFFFF6F00), // 设置背景色
+                        borderRadius: BorderRadius.circular(20.0), // 设置圆角
+                      ),
+                      padding: EdgeInsets.symmetric(vertical: 3, horizontal: 20),
+                      child: Text(
+                        "连接设备",
+                        style: TextStyle(
+                          color: Color(0xFFFFFFFF),
+                          fontFamily: 'Roboto',
+                          fontWeight: FontWeight.w400,
+                          fontSize: 20.0, // 设置文字大小
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: 20,),//between svg image and button
+          //svg图片自适应占位大小
+          Expanded(
+            child:
+            Align(
+              alignment: Alignment.center,
+              child: Container(
+                child: SvgPicture.asset(
+                  'assets/linkDeskHome.svg', // SVG 图片路径
+                  fit: BoxFit.cover, // 设置图片适应方式
+                ),
+              ),
+            ),
+          ),
+
+
+
+
+        ],
+      ),
+
+
+
+    );
+  }
+
+
   @override
   Widget build(BuildContext context) {
     Provider.of<FfiModel>(context);
-    return CustomScrollView(
-      slivers: [
-        SliverList(
-            delegate: SliverChildListDelegate([
-          if (!bind.isCustomClient()) _buildUpdateUI(),
-          _buildRemoteIDTextField(),
-        ])),
-        SliverFillRemaining(
-          hasScrollBody: true,
-          child: PeerTabPage(),
-        )
-      ],
-    ).marginOnly(top: 2, left: 10, right: 10);
+    // return CustomScrollView(
+    //   slivers: [
+    //     SliverList(
+    //         delegate: SliverChildListDelegate([
+    //       if (!bind.isCustomClient()) _buildUpdateUI(),
+    //       _buildRemoteIDTextField(),
+    //     ])),
+    //     SliverFillRemaining(
+    //       hasScrollBody: true,
+    //       child: PeerTabPage(),
+    //     )
+    //   ],
+    // ).marginOnly(top: 2, left: 10, right: 10);
+
+
+    return buildLinkDeskHome(context);
   }
 
   /// Callback for the connect button.
